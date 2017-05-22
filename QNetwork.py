@@ -43,6 +43,7 @@ class QNetwork(object):
         rollout_return[-1] = reward
         running_add = 0
         for i in reversed(xrange(0, num_steps)):
+            
             running_add = running_add*self.gamma + rollout_return[i]
             
         return rollout_return
