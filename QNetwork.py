@@ -12,18 +12,21 @@ class QNetwork(object):
     '''
 
 
-    def __init__(self, params):
+    def __init__(self):
         '''
         Constructor
         '''
         self.g = tf.Graph()
         self.sess = tf.InteractiveSession(graph=self.g) #,config=tf.ConfigProto(log_device_placement=True))
-        self.state_placeholder = tf.placeholder(tf.float32, [None, 9],name="Board_states")
-        self.Q_value_placehoalder = tf.placeholder(tf.float32, [1], name="Q_value")
+        self.state_placeholder = tf.placeholder(tf.string, [1,10],name="States")
+        self.Q_target = tf.placeholder(tf.string, [1],name="Q_targets")
+        self.alpha = 0.1
         self.gamma = 0.99
         self.NeuralNetwork(10)
-        
-    def NeuralNetwork(self, HIDDEN_UNITS_L1, NUM_INPUTS=9, NUM_OUTPUTS=1):
+        self.setLossFunction()
+        self.predict = tf.argmax(self.Qout,1)
+
+    def NeuralNetwork(self, HIDDEN_UNITS_L1, NUM_INPUTS=10, NUM_OUTPUTS=1):
         with self.g.as_default():
 
             weights_1 = tf.Variable(tf.truncated_normal([NUM_INPUTS, HIDDEN_UNITS_L1]),name="w1")
@@ -32,24 +35,36 @@ class QNetwork(object):
 
             weights_2 = tf.Variable(tf.truncated_normal([HIDDEN_UNITS_L1, NUM_OUTPUTS]),name="w2")
             biases_2 = tf.Variable(tf.zeros([NUM_OUTPUTS]),name="b2")
-            self.ff_NN_train = tf.add(tf.matmul(layer_1_outputs, weights_2,name="L1_W2_Mul"),biases_2,name="output")
-            
-            loss_function = tf.reduce_mean(tf.square(tf.subtract(self.ff_NN_train, self.Q_value_placehoalder)))
-            self.loss = tf.train.AdamOptimizer(learning_rate=0.001).minimize(loss_function)
+            self.Qout = tf.add(tf.matmul(layer_1_outputs, weights_2,name="L1_W2_Mul"),biases_2,name="output")
 
+    def setLossFunction(self):
+        
+        loss_function = tf.reduce_sum(tf.square(tf.subtract(self.Qout, self.Q_target)))
+        self.train_op = tf.train.AdamOptimizer(learning_rate=0.1).minimize(loss_function)
+        
+    def train(self, curr_state, next_state, action, reward):
+        with self.g.as_default():
+            maxQ,_ = self.getMaxQvalue(next_state)
+            targetQ = reward + self.gamma*maxQ
+            feed_dict={self.Q_target: targetQ,
+                       self.state_placeholder: curr_state} 
+            for _ in range(1):
+                self.sess.run(self.train_op,feed_dict)
+        return True
+    
+    def getQValue(self, state):
+        with self.g.as_default():
+            return self.sess.run(self.Qout,feed_dict={self.state_placeholder: state})
 
-    def calculateDiscReturn(self, reward, num_steps):
-        rollout_return = np.zeros(num_steps)
-        rollout_return[-1] = reward
-        running_add = 0
-        for i in reversed(xrange(0, num_steps)):
-            
-            running_add = running_add*self.gamma + rollout_return[i]
-            
-        return rollout_return
-        
-    def train(self, discReturn):
-        
-        
-        
-        return None
+    def getMaxQvalue(self, state, allActions):
+        with self.g.as_default():
+            maxQvalue = -1e10
+            bestAction = ''
+            for action in allActions:
+                input = np.array(list(state+str(allActions)))
+                currQvalue = self.sess.run(self.Qout,feed_dict={self.state_placeholder: input})
+                if currQvalue>maxQvalue:
+                    maxQvalue=currQvalue
+                    bestAction = action
+            return maxQvalue, bestAction
+    

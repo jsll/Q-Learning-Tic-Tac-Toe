@@ -5,6 +5,8 @@ Created on Feb 26, 2017
 '''
 import numpy as np
 import random
+from QNetwork import QNetwork
+
 class Player(object):
     '''
     classdocs
@@ -29,14 +31,15 @@ class Player(object):
 class Qplayer(Player):
     def __init__(self, epsilon, mark,Q={}):
         super(Qplayer, self).__init__(mark=mark)
-        self.Q_net = ??
+        self.Q_net = QNetwork()
         self.epsilon = 0
         
     def get_move(self, board):
         if  np.random.uniform(0,1,1)>self.epsilon:
             return self.choose_randomly(board)
-        #else:
-            return self.Q_net.choose(board)
+        else:
+            _, action = getMaxQvalue(board.board_state_to_string(self.mark),board.get_empty_pos())
+            return action
             
     def choose_randomly(self, board):
         empty_pos = board.get_empty_pos()
