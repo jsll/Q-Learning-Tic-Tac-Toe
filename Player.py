@@ -32,16 +32,19 @@ class Qplayer(Player):
     def __init__(self, epsilon, mark,Q={}):
         super(Qplayer, self).__init__(mark=mark)
         self.Q_net = QNetwork()
-        self.epsilon = 0
+        self.epsilon = 0.5
         
     def get_move(self, board):
         if  np.random.uniform(0,1,1)>self.epsilon:
             return self.choose_randomly(board)
         else:
-            _, action = getMaxQvalue(board.board_state_to_string(self.mark),board.get_empty_pos())
+            _, action = self.Q_net.getMaxQvalue(board.get_board_state(),board.get_empty_pos())
             return action
             
     def choose_randomly(self, board):
         empty_pos = board.get_empty_pos()
         return random.choice(empty_pos)
     
+    def updateQNetwork(self, curr_state, next_state, action, reward, allActions, terminal):
+        curr_state.append(action)
+        self.Q_net.train(curr_state, next_state, reward, allActions, terminal)

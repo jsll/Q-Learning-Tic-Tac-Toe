@@ -18,13 +18,13 @@ class QNetwork(object):
         '''
         self.g = tf.Graph()
         self.sess = tf.InteractiveSession(graph=self.g) #,config=tf.ConfigProto(log_device_placement=True))
-        self.state_placeholder = tf.placeholder(tf.string, [1,10],name="States")
-        self.Q_target = tf.placeholder(tf.string, [1],name="Q_targets")
-        self.alpha = 0.1
+        self.state_placeholder = tf.placeholder(tf.float32, [1,10],name="States")
+        self.Q_target = tf.placeholder(tf.float32, [1,1],name="Q_targets")
         self.gamma = 0.99
         self.NeuralNetwork(10)
         self.setLossFunction()
         self.predict = tf.argmax(self.Qout,1)
+        self.sess.run(tf.global_variables_initializer())
 
     def NeuralNetwork(self, HIDDEN_UNITS_L1, NUM_INPUTS=10, NUM_OUTPUTS=1):
         with self.g.as_default():
@@ -42,12 +42,15 @@ class QNetwork(object):
         loss_function = tf.reduce_sum(tf.square(tf.subtract(self.Qout, self.Q_target)))
         self.train_op = tf.train.AdamOptimizer(learning_rate=0.1).minimize(loss_function)
         
-    def train(self, curr_state, next_state, action, reward):
+    def train(self, curr_state, next_state, reward, allActions, terminal):
         with self.g.as_default():
-            maxQ,_ = self.getMaxQvalue(next_state)
-            targetQ = reward + self.gamma*maxQ
+            if terminal:
+                targetQ = np.asarray(reward).reshape(1,1)
+            else:
+                maxQ,_ = self.getMaxQvalue(next_state, allActions)
+                targetQ = reward + self.gamma*maxQ
             feed_dict={self.Q_target: targetQ,
-                       self.state_placeholder: curr_state} 
+                       self.state_placeholder: np.asarray(curr_state).reshape(1,10)} 
             for _ in range(1):
                 self.sess.run(self.train_op,feed_dict)
         return True
@@ -59,9 +62,10 @@ class QNetwork(object):
     def getMaxQvalue(self, state, allActions):
         with self.g.as_default():
             maxQvalue = -1e10
-            bestAction = ''
+            bestAction = 0
             for action in allActions:
-                input = np.array(list(state+str(allActions)))
+                input = np.asarray(state+[action])
+                input = input.reshape(1,10)
                 currQvalue = self.sess.run(self.Qout,feed_dict={self.state_placeholder: input})
                 if currQvalue>maxQvalue:
                     maxQvalue=currQvalue

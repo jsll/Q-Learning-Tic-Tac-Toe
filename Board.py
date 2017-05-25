@@ -8,7 +8,7 @@ from __future__ import print_function
 import numpy as np
 from __builtin__ import True
 from docutils.nodes import row
-
+import copy
 
 class Board(object):
     '''
@@ -24,7 +24,7 @@ class Board(object):
         self.num_x = 0
         self.num_o = 0
         self.current_res = [0 for x in range(8)]
-        self.empty_pos = range(9)
+        self.empty_pos = range(1,10)
         
     def place_spot(self,pos,mark):
         value = 0
@@ -80,6 +80,9 @@ class Board(object):
                 board_state += '0'
             
         return board_state
+    
+    def get_board_state(self):
+        return copy.deepcopy(self.board)
     '''
     Check if the game is over.
     
@@ -112,6 +115,7 @@ class Board(object):
         self.num_x = 0
         self.num_o = 0
         self.current_res = [0 for x in range(8)]
+        self.empty_pos = range(1,10)
     
     def get_empty_pos(self):
         return self.empty_pos

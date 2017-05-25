@@ -17,65 +17,74 @@ class Game(object):
         Constructor
         '''
         self.board = Board()
-        #self.AI = AIPlayer()
         self.turns = 0
-#         self.state = StateActions()
-#         self.player1 = player1
+        self.player1 = Qplayer(0,'x')
         self.player2 = Qplayer(0,'o')
-        
+        self.games = 0
     def play_game(self, maxGames):
         games = 0
         self.board.print_board()
-
-        while(games<maxGames):
-
+        while(self.games<maxGames):
+            
+            prev_state = self.board.get_board_state()
             if self.turns%2==0:
-                print "Player ones turn"
+                #print "Player ones turn"
                 while True:
-                    pos = int(raw_input("Enter position [1-9] "))
-                    if self.board.place_spot(pos,'x'):
+                    #action = int(raw_input("Enter position [1-9] "))
+                    action = self.player1.get_move(self.board)
+                    if self.board.place_spot(action,'x'):
                         break
                     else:
                         print "Position taken. Please choose another position."
             else:
-                print "Player twos turn"
+                #print "Player twos turn"
                 while True:
-                    pos = self.player2.get_move(self.board)
-                    if self.board.place_spot(pos,'o'):
+                    action = self.player2.get_move(self.board)
+                    if self.board.place_spot(action,'o'):
                         break
                     else:
                         print "Position taken. Please choose another position."
             
-#             self.state.add_state(self.board, self.turn%2)
-            
+            curr_state = self.board.get_board_state()
+
+            #self.board.print_board()
             game_state = self.board.game_state()
-            self.board.print_board()
-            self.turns +=1 
 
             if game_state == 0:
                 print "Draw"
-                games+=1
-                player1_reward = 0
-                player2_reward = 0
-                self.resetGame(games)
+                player1_reward = 0.5
+                player2_reward = 0.5
+                terminal = 1
+                self.resetGame()
             elif game_state == 1:
                 print "Player one wins"
-                games+=1
                 player1_reward = 1
                 player2_reward = -1
-                self.resetGame(games)
+                terminal = 1
+                self.resetGame()
             elif game_state == -1:
                 print "Player two wins"
-                games+=1
                 player1_reward = -1
                 player2_reward = 1
-                self.resetGame(games)
+                terminal = 1
+                self.resetGame()
             else:
-                player1_reward = -1
-                player2_reward = 1
+                terminal = 0
+                player1_reward = 0
+                player2_reward = 0
+            
+            all_actions = self.board.get_empty_pos()
+            
+            if self.turns%2==0:
+                self.player1.updateQNetwork(prev_state, curr_state, action, player1_reward, all_actions, terminal)
+            if self.turns%2!=0:
+                self.player2.updateQNetwork(prev_state, curr_state, action, player2_reward, all_actions, terminal)
+            
+            self.turns +=1 
 
             #updateQvalues()
 
-    def resetGame(self, games):
-        self.turns = games
+    def resetGame(self):
+        self.games+=1
+        self.turns = 0
         self.board.reset_board()

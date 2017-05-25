@@ -19,6 +19,6 @@ def main():
 #     print board.board_to_string()
 
     game = Game()
-    game.play_game(1)
+    game.play_game(1000)
 if __name__ == '__main__':
     main()
