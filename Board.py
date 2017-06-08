@@ -26,7 +26,7 @@ class Board(object):
         self.current_res = [0 for x in range(8)]
         self.empty_pos = range(1,10)
         
-    def place_spot(self,pos,mark):
+    def place_mark(self,pos,mark):
         value = 0
         if self.board[pos-1] == 0:
             row,col = self.get_row_and_col(pos-1)
@@ -92,15 +92,27 @@ class Board(object):
             -1 if player 2 wins
     
     '''
+    
+    def game_over(self):
+        return (self.is_full() or self.get_winner() is not None)
+
+    def get_winner(self):
+        if self.current_res[i]==3:
+            return "X"
+        elif self.current_res[i]==-3:
+            return "O"
+        else:
+            return None
+        
     def game_state(self):
         if self.num_o<3 and self.num_x<3:
             return -10
 
         for i in range(len(self.current_res)):
             if (self.current_res[i]==3):
-                return 1
+                return "X"
             elif(self.current_res[i]==-3):
-                return -1
+                return "O"
         
         if self.is_full():
             return 0
@@ -110,6 +122,11 @@ class Board(object):
     def is_full(self):
         return ((self.num_o+self.num_x)==9)
     
+    def get_next_board(self, move, mark):
+        next_board = copy.deepcopy(self)
+        next_board.place_mark(move, mark)
+        return next_board
+        
     def reset_board(self): 
         self.board = [0 for x in range(9)]
         self.num_x = 0
@@ -120,3 +137,16 @@ class Board(object):
     def get_empty_pos(self):
         return self.empty_pos
     
+    def get_board_reward(self):
+        if self.game_over():
+            winner = get_winner()
+            if winner is not None:
+                if winner == "X":
+                    return 1
+                else:
+                    return -1
+            else:
+                return 0.5
+        
+        else:
+            return 0

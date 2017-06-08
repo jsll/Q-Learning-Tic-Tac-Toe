@@ -19,6 +19,8 @@ class QNetwork(object):
         self.g = tf.Graph()
         self.sess = tf.InteractiveSession(graph=self.g) #,config=tf.ConfigProto(log_device_placement=True))
         self.state_placeholder = tf.placeholder(tf.float32, [1,10],name="States")
+        self.learning_rate_ph = tf.placeholder(tf.float32, name="Learning_rate")
+        self.learning_rate = 1
         self.Q_target = tf.placeholder(tf.float32, [1,1],name="Q_targets")
         self.gamma = 0.99
         self.NeuralNetwork(10)
@@ -40,7 +42,7 @@ class QNetwork(object):
     def setLossFunction(self):
         
         loss_function = tf.reduce_sum(tf.square(tf.subtract(self.Qout, self.Q_target)))
-        self.train_op = tf.train.AdamOptimizer(learning_rate=0.1).minimize(loss_function)
+        self.train_op = tf.train.AdamOptimizer(self.learning_rate).minimize(loss_function)
         
     def train(self, curr_state, next_state, reward, allActions, terminal):
         with self.g.as_default():
@@ -49,8 +51,10 @@ class QNetwork(object):
             else:
                 maxQ,_ = self.getMaxQvalue(next_state, allActions)
                 targetQ = reward + self.gamma*maxQ
-            feed_dict={self.Q_target: targetQ,
-                       self.state_placeholder: np.asarray(curr_state).reshape(1,10)} 
+            
+            feed_dict={self.Q_target          : targetQ,
+                       self.state_placeholder : np.asarray(curr_state).reshape(1,10),
+                       self.learning_rate_ph  : self.learning_rate} 
             for _ in range(1):
                 self.sess.run(self.train_op,feed_dict)
         return True
@@ -59,6 +63,9 @@ class QNetwork(object):
         with self.g.as_default():
             return self.sess.run(self.Qout,feed_dict={self.state_placeholder: state})
 
+    def reduceLearningRate(self):
+        self.learning_rate *= 0.999
+        
     def getMaxQvalue(self, state, allActions):
         with self.g.as_default():
             maxQvalue = -1e10
