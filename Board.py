@@ -68,56 +68,24 @@ class Board(object):
                 print('|',end='')
             if ((i+1)%3) == 0:
                 print('\n',end='')
-       
-    def board_state_to_string(self, mark):
-        board_state = mark
-        for i in range(9):
-            if (self.board[i]==1):
-                board_state += 'x'
-            elif (self.board[i]==-1):
-                board_state += 'o'
-            else:
-                board_state += '0'
-            
-        return board_state
-    
+        for i in range(3):
+            print ("--",end='')
+        print ("\n")
+
     def get_board_state(self):
         return copy.deepcopy(self.board)
-    '''
-    Check if the game is over.
-    
-    Returns: 0 if the game is draw
-            -10 if a player can still do moves
-             1 if player 1 wins
-            -1 if player 2 wins
-    
-    '''
     
     def game_over(self):
         return (self.is_full() or self.get_winner() is not None)
 
     def get_winner(self):
-        if self.current_res[i]==3:
-            return "X"
-        elif self.current_res[i]==-3:
-            return "O"
-        else:
-            return None
-        
-    def game_state(self):
-        if self.num_o<3 and self.num_x<3:
-            return -10
-
         for i in range(len(self.current_res)):
-            if (self.current_res[i]==3):
+            if self.current_res[i]==3:
                 return "X"
-            elif(self.current_res[i]==-3):
+            elif self.current_res[i]==-3:
                 return "O"
-        
-        if self.is_full():
-            return 0
 
-        return -10
+        return None
     
     def is_full(self):
         return ((self.num_o+self.num_x)==9)
@@ -133,20 +101,19 @@ class Board(object):
         self.num_o = 0
         self.current_res = [0 for x in range(8)]
         self.empty_pos = range(1,10)
-    
+        
     def get_empty_pos(self):
         return self.empty_pos
     
     def get_board_reward(self):
-        if self.game_over():
-            winner = get_winner()
-            if winner is not None:
-                if winner == "X":
-                    return 1
-                else:
-                    return -1
+        if not self.game_over():
+            return 0
+        else:
+            winner = self.get_winner()
+            if winner == "X":
+                return 1
+            elif winner == "O":
+                return -1
             else:
                 return 0.5
         
-        else:
-            return 0

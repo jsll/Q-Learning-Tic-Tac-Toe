@@ -5,7 +5,7 @@ Created on Feb 14, 2017
 '''
 from Board import Board
 from States import StateActions
-from Player import Qplayer
+from Player import *
 from QNetwork import QNetwork
 from twisted.python.reflect import isinst
 class Game(object):
@@ -20,25 +20,60 @@ class Game(object):
         '''
         self.board = Board()
         self.turns = 0
-        self.player1 = Qplayer(0,'x')
-        self.player2 = Qplayer(0,'o')
-        self.current_player = self.player1
-        self.other_player = self.player2
         self.games = 0
-        self.QNet = QNetwork
-        self.set_shared_Q_network()
+        self.QNet = QNetwork()
         
-    def set_shared_Q_network(self):
+    def AI_vs_AI(self):
+        self.player1 = self.create_Qplayer('x',0.99)
+        self.player2 = self.create_Qplayer('o',0.99)
+        self.set_Q_network()
+        self.set_players()
+        
+    def Human_vs_AI(self):
+        self.player1 = self.create_HumanPlayer('x')
+        self.player2 = self.create_Qplayer('o',0)
+        self.set_Q_network()
+        self.set_players()
+        
+    def Human_vs_Human(self):
+        self.player1 = self.create_HumanPlayer('x')
+        self.player2 = self.create_HumanPlayer('o')
+        self.set_players()
+        
+    def set_players(self):
+        self.current_player = self.player1
+        self.other_player = self.player2  
+
+    def activate_Qlearning(self):
+        self.learnQ = True
+    
+    def deactivate_Qlearning(self):
+        self.learnQ = False
+    
+    def create_HumanPlayer(self, mark):
+        player = HumanPlayer(mark)
+        return player
+    
+    def create_Qplayer(self, mark, exploration):
+        player = Qplayer(mark)
+        self.set_Qplayer_parameters(player, exploration)
+        return player
+    
+    def set_Qplayer_parameters(self, Qplayer, exploration):
+        Qplayer.set_exploration_rate(exploration)
+        Qplayer.set_decay_rate(10000)
+        
+    def set_Q_network(self):
         if isinstance(self.player1,Qplayer):
             self.player1.set_Q_network(self.QNet)
         if isinstance(self.player2, Qplayer):
             self.player2.set_Q_network(self.QNet)
             
-    def play_game(self, maxGames):
-        while(self.games<maxGames):
-            if isinstance(self.player1,Qplayer) and isinstance(self.player2, Qplayer):
-                while not self.board.game_over():
-                    self.play_turn()
+    def play_games(self, maxNumGames):
+        while(self.games<maxNumGames):
+            while not self.board.game_over():
+                self.play_turn()
+
             self.resetGame()
         
     def play_turn(self):
@@ -48,17 +83,20 @@ class Game(object):
         
     def handle_move(self, move):
         self.learn_Q(move)
-        self.board.place_mark(action, self.current_player.mark)
+        self.board.place_mark(move, self.current_player.mark)
         
     def learn_Q(self, move):
         next_board = self.board.get_next_board(move, self.current_player.mark)
-        next_reward = next_board.get_board_reward()
-        curr_state = self.board.get_state()
-        next_state = next_board.get_state()
+        next_board.print_board()
+        reward = next_board.get_board_reward()
+        curr_state = self.board.get_board_state()
+        next_state = next_board.get_board_state()
         curr_state.append(move)
         terminal = next_board.game_over()
         allActions = next_board.get_empty_pos()
-        self.QNet.train(curr_state, next_state, reward, allActions, terminal)
+        sign = "max" if self.current_player.mark == "x" else "min"
+        print sign
+        self.QNet.train(curr_state, next_state, reward, allActions, terminal, sign)
         
     def switch_player(self):
         if self.current_player == self.player1:
@@ -68,48 +106,13 @@ class Game(object):
             self.current_player = self.player1
             self.other_player = self.player2
             
-    def test_play(self):
-        self.board.print_board()
-        self.turns = 0
-        while(True):
-            
-            if self.turns%2==0:
-                print "Player ones turn"
-                while True:
-                    action = int(raw_input("Enter position [1-9] "))
-                    if self.board.place_spot(action,'x'):
-                        break
-                    else:
-                        print "Position taken. Please choose another position."
-            else:
-                #print "Player twos turn"
-                while True:
-                    action = self.player2.get_move(self.board)
-                    if self.board.place_spot(action,'o'):
-                        break
-                    else:
-                        print "Position taken. Please choose another position."
-            
-            self.board.print_board()
-            game_state = self.board.game_state()
-
-            if game_state == 0:
-                print "Draw"
-                self.resetGame()
-            elif game_state == 1:
-                print "Player one wins"
-                self.resetGame()
-            elif game_state == -1:
-                print "Player two wins"
-                self.resetGame()
-                            
-            self.turns +=1
-
-    def updatePlayersHyperParameters(self, player1, player2):
-        player1.tuneHyperParameters(self.games)
-        player2.tuneHyperParameters(self.games)
-
     def resetGame(self):
         self.games+=1
         self.turns = 0
+        if isinstance(self.player1,Qplayer):
+            self.player1.reduce_exploration(self.games)
+        if isinstance(self.player2, Qplayer):
+            self.player2.reduce_exploration(self.games)
+            
+        self.set_players()
         self.board.reset_board()

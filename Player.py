@@ -27,31 +27,50 @@ class Player(object):
             self.opponent_mark = 'x'
         else:
             print "Mark has to be either 'o' or 'x'"
-            
+
+class HumanPlayer(Player):
+    def __init__(self, mark):
+        super(HumanPlayer, self).__init__(mark=mark)
+        
+    def get_move(self, board):
+        while True:
+            move = int(raw_input("Enter position [1-9] "))
+            if board.place_spot(move,self.mark):
+                return move
+            else:
+                print "Position taken. Please choose another position."
+
+
 class Qplayer(Player):
-    def __init__(self, epsilon, mark,Q={}):
+    def __init__(self, mark):
         super(Qplayer, self).__init__(mark=mark)
-        self.Q_net
-        self.epsilon = 0.9
+        self.epsilon = 0
+        self.initial_epsilon = 0
+        self.Q_net = 0
         
     def set_Q_network(self, Q_network):
         self.Q_net = Q_network
         
+    def set_exploration_rate(self, new_epsilon):
+        self.epsilon = new_epsilon
+        self.initial_epsilon = self.epsilon
+        
+    def set_decay_rate(self, decay_rate):
+        self.decay_rate = decay_rate
+        
+    def reduce_exploration(self, rate):
+        self.epsilon = self.initial_epsilon*np.exp(-rate/self.decay_rate)
+        
     def get_move(self, board):
-        if  np.random.uniform(0,1,1)>self.epsilon:
+        if  np.random.uniform(0,1,1)<self.epsilon:
             return self.choose_randomly(board)
         else:
-            _, action = self.Q_net.getMaxQvalue(board.get_board_state(),board.get_empty_pos())
+            if self.mark == "x":
+                _, action = self.Q_net.getBestQvalue(board.get_board_state(),board.get_empty_pos(), "max")
+            elif self.mark == "o":
+                _, action = self.Q_net.getBestQvalue(board.get_board_state(),board.get_empty_pos(), "min")
             return action
             
     def choose_randomly(self, board):
         empty_pos = board.get_empty_pos()
         return random.choice(empty_pos)
-    
-    def updateQNetwork(self, curr_state, next_state, action, reward, allActions, terminal):
-        curr_state.append(action)
-        self.Q_net.train(curr_state, next_state, reward, allActions, terminal)
-
-    def tuneHyperParameters(self, num_games):
-        self.epsilon -= (1/10000)*num_games
-        self.Q_net.reduceLearningRate()

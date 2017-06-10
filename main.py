@@ -8,7 +8,8 @@ from Board import Board
 
 def main():
     game = Game()
-    #game.play_game(10000)
+    game.AI_vs_AI()
+    game.play_games(1)
     #game.test_play()
     
 if __name__ == '__main__':

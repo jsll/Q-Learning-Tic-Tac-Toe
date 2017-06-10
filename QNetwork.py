@@ -44,12 +44,12 @@ class QNetwork(object):
         loss_function = tf.reduce_sum(tf.square(tf.subtract(self.Qout, self.Q_target)))
         self.train_op = tf.train.AdamOptimizer(self.learning_rate).minimize(loss_function)
         
-    def train(self, curr_state, next_state, reward, allActions, terminal):
+    def train(self, curr_state, next_state, reward, allActions, terminal, sign):
         with self.g.as_default():
             if terminal:
                 targetQ = np.asarray(reward).reshape(1,1)
             else:
-                maxQ,_ = self.getMaxQvalue(next_state, allActions)
+                maxQ,_ = self.getBestQvalue(next_state, allActions, sign)
                 targetQ = reward + self.gamma*maxQ
             
             feed_dict={self.Q_target          : targetQ,
@@ -57,6 +57,8 @@ class QNetwork(object):
                        self.learning_rate_ph  : self.learning_rate} 
             for _ in range(1):
                 self.sess.run(self.train_op,feed_dict)
+            self.reduceLearningRate()
+            
         return True
     
     def getQValue(self, state):
@@ -66,16 +68,20 @@ class QNetwork(object):
     def reduceLearningRate(self):
         self.learning_rate *= 0.999
         
-    def getMaxQvalue(self, state, allActions):
+    def getBestQvalue(self, state, allActions, sign):
         with self.g.as_default():
-            maxQvalue = -1e10
+            if sign == "max":
+                bestQvalue = -1e10
+            elif sign == "min":
+                bestQvalue = 1e10
+
             bestAction = 0
             for action in allActions:
                 input = np.asarray(state+[action])
                 input = input.reshape(1,10)
                 currQvalue = self.sess.run(self.Qout,feed_dict={self.state_placeholder: input})
-                if currQvalue>maxQvalue:
-                    maxQvalue=currQvalue
+                if currQvalue>bestQvalue:
+                    bestQvalue=currQvalue
                     bestAction = action
-            return maxQvalue, bestAction
+            return bestQvalue, bestAction
     
